@@ -16,8 +16,13 @@ async fn main() -> Result<()> {
     // println!("{}", body);
     let resp = get_weather_results().await;
     let parsed = read_json(&resp).as_object().unwrap().to_owned();
+    let elevation = parsed["elevation"].as_f64().unwrap();
     let hourly_parsed = parsed["hourly"].as_object().unwrap().to_owned();
-    println!("{:?}", hourly_parsed);
+    let weather_data = WeatherData {
+        elevation,
+        hourly: hourly_parsed,
+    };
+
     Ok(())
 }
 
@@ -38,9 +43,9 @@ fn read_json(raw_json: &str) -> Value {
 }
 
 
-struct WeatherData<T > {
+struct WeatherData {
     elevation: f64,
-    hourly: HashMap<String, T>
+    hourly: Map<String, Value>
 }
 
 struct WPoller<'a, T> {
@@ -65,7 +70,7 @@ enum WPollerError {
 }
 
 trait Sender<'a, T> {
-    fn send(&self, weather_data: &'a WeatherData<T>) -> bool;
+    fn send(&self, weather_data: &'a WeatherData) -> bool;
 }
 
 struct EmailSender<'a> {
@@ -73,7 +78,7 @@ struct EmailSender<'a> {
 }
 
 impl <'a, T> Sender<'a, T> for EmailSender<'a> {
-    fn send(&self, weather_data: &'a WeatherData<T>) -> bool {
+    fn send(&self, weather_data: &'a WeatherData) -> bool {
         println!("Sending weather data to {}", self.email); 
         return false;
     }
@@ -84,7 +89,7 @@ struct SMSSender<'a> {
 }
 
 impl <'a, T> Sender<'a, T> for SMSSender<'a> {
-    fn send(&self, weather_data: &'a WeatherData<T>) -> bool {
+    fn send(&self, weather_data: &'a WeatherData) -> bool {
         println!("Sending weather data to phone: {}", self.phone);
 
         return false;
